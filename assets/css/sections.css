@@ -145,14 +145,15 @@
 }
 .reels-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
+  margin-top: 40px;
 }
 .reel-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   overflow: hidden;
   background: radial-gradient(circle at 70% 30%, #765f3d 0, #2b2721 40%, #111 100%);
   border: 1px solid #756344;
@@ -161,26 +162,12 @@
   cursor: pointer;
   aspect-ratio: 9 / 16;
   border-radius: var(--content-radius);
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
 }
 .reel-two {
   background: radial-gradient(circle at 25% 75%, #6a583b 0, #282923 44%, #111 100%);
 }
 .reel-three {
   background: radial-gradient(circle at 80% 70%, #56503e 0, #242523 48%, #111 100%);
-}
-.reel-top {
-  position: relative;
-  z-index: 1;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  width: fit-content;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #171715cc;
 }
 .reel-bottom {
   position: relative;
@@ -190,15 +177,21 @@
   letter-spacing: 0.12em;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   width: fit-content;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #171715cc;
+  background: #171715;
 }
 .reel-bottom b {
-  font-size: 22px;
-  line-height: 0.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  font-size: 12px;
+  line-height: 1;
   color: var(--gold);
 }
 .reels-carousel {
@@ -213,33 +206,51 @@
   position: relative;
   display: block;
   margin-inline: auto;
-  height: 60.45cqw;
+  height: 49.78cqw;
   overflow: hidden;
   touch-action: pan-y;
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
-  /* Fade the outside edges while keeping the active reel crisp. */
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  /* Start at the outer cards' visible edges and reach full opacity toward the center. */
+  --reel-fade-edge: 2.92%;
+  --reel-fade-full: 28%;
+  clip-path: inset(0 2.92%);
+  mask-image: linear-gradient(90deg, transparent var(--reel-fade-edge), #000 var(--reel-fade-full), #000 calc(100% - var(--reel-fade-full)), transparent calc(100% - var(--reel-fade-edge)));
+  -webkit-mask-image: linear-gradient(90deg, transparent var(--reel-fade-edge), #000 var(--reel-fade-full), #000 calc(100% - var(--reel-fade-full)), transparent calc(100% - var(--reel-fade-edge)));
 }
 .reels-carousel.is-ready .reel-card {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 34cqw;
+  width: 28cqw;
   box-sizing: border-box;
-  will-change: transform, opacity;
+  will-change: transform;
   transition: none;
   cursor: grab;
-  border-color: #756344;
+  background: #171715;
+  border-color: color-mix(in srgb, var(--gold) calc(var(--reel-focus, 0) * 100%), #756344);
+  box-shadow:
+    0 18px 54px rgb(0 0 0 / calc(var(--reel-focus, 0) * .33)),
+    0 0 0 1px rgb(232 177 26 / calc(var(--reel-focus, 0) * .125));
+}
+.reels-carousel.is-ready .reel-bottom {
+  opacity: clamp(0, calc((var(--reel-focus, 0) - .5) * 2), 1);
+  pointer-events: none;
+}
+.reels-carousel.is-ready .reel-thumbnail {
+  opacity: 1;
+}
+/* Spare wrapping copies must not peek through the outer cards' rounded corners. */
+.reels-carousel.is-ready .reel-card[aria-hidden="true"] {
+  visibility: hidden;
+}
+.reels-carousel.is-ready .is-moving .reel-card[aria-hidden="true"],
+.reels-carousel.is-ready .is-dragging .reel-card[aria-hidden="true"] {
+  visibility: visible;
 }
 .reels-carousel.is-ready .reel-card.is-active {
-  border-color: var(--gold);
-  z-index: 2;
-}
-.reels-carousel.is-ready .is-moving .reel-card {
-  transition: transform .42s cubic-bezier(.22, .68, .25, 1), opacity .42s ease;
+  cursor: pointer;
 }
 .reels-carousel.is-ready .is-dragging,
 .reels-carousel.is-ready .is-dragging .reel-card {
@@ -248,15 +259,6 @@
 .reels-carousel.is-ready .reel-card::after,
 .reels-carousel.is-ready .reel-card:focus-visible::after {
   opacity: 0;
-}
-.reels-carousel.is-ready .reel-card:hover .reel-thumbnail {
-  transform: none;
-}
-.reels-carousel.is-ready .reel-card:not(.is-active) .see-video-hint {
-  display: none;
-}
-.reels-carousel.is-ready .reel-card.is-active:hover .see-video-hint {
-  opacity: 1;
 }
 .reels-carousel.is-ready .reel-card:focus-visible {
   outline-offset: -5px;
@@ -300,7 +302,7 @@
 .reels-dots {
   flex-wrap: wrap;
   justify-content: flex-end;
-  max-width: 220px;
+  max-width: 260px;
   gap: 2px;
 }
 .reels-dots button {
@@ -331,7 +333,10 @@
 }
 @media (max-width: 680px) {
   .reels-carousel.is-ready .reels-grid {
+    --reel-fade-edge: 0%;
+    --reel-fade-full: 22%;
     height: 99.56cqw;
+    clip-path: none;
   }
   .reels-carousel.is-ready .reel-card {
     width: 56cqw;
@@ -341,6 +346,11 @@
     font-size: 7px;
     letter-spacing: .04em;
     padding: 7px;
+  }
+  .reels-carousel.is-ready .reel-bottom b {
+    width: 11px;
+    height: 11px;
+    font-size: 10px;
   }
   .reels-navigation {
     flex-wrap: wrap;
@@ -352,13 +362,7 @@
     width: 100%;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .reels-carousel.is-ready .is-moving .reel-card {
-    transition: none;
-  }
-}
-.video-cursor-active .video-media,
-.video-cursor-active .reel-card {
+.video-cursor-active .video-media {
   cursor: none;
 }
 .video-hover-cursor {
@@ -411,11 +415,7 @@
   opacity: 0;
   pointer-events: none;
 }
-.reel-card .see-video-hint {
-  bottom: 56px;
-}
-.video-card:focus-visible .see-video-hint,
-.reel-card:focus-visible .see-video-hint {
+.video-card:focus-visible .see-video-hint {
   opacity: 1;
 }
 .video-card:focus-visible {
@@ -438,7 +438,44 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.35s ease;
+}
+/* Reframe the published covers without baking player controls into the thumbnails. */
+.reel-card-dreams .reel-thumbnail {
+  scale: 1.8;
+  transform-origin: 65% 50%;
+}
+.reel-card-enjoy-life::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  background: linear-gradient(#17171566, #171715f5), url("../images/instagram-enjoy-life-thumbnail.jpg") center / cover;
+  filter: blur(14px);
+  pointer-events: none;
+}
+.reel-card-enjoy-life .reel-thumbnail {
+  top: 10%;
+  bottom: auto;
+  height: 56%;
+  object-fit: cover;
+  object-position: 30% 50%;
+  mask-image: linear-gradient(transparent, #000 8%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 90%, transparent);
+}
+.reel-cover-title {
+  position: absolute;
+  top: 69%;
+  left: 10%;
+  color: #f8f7f4;
+  font-family: Manrope, Arial, sans-serif;
+  font-size: clamp(28px, 3cqw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  pointer-events: none;
+}
+.reel-cover-title em {
+  color: var(--gold);
+  font-style: normal;
 }
 .video-media::after,
 .reel-card::after {
@@ -513,7 +550,6 @@
   .reel-card {
     padding: 13px;
   }
-  .reel-top,
   .reel-bottom {
     font-size: 8px;
   }
@@ -537,23 +573,20 @@
 }
 @media (min-width: 1051px) {
   .reels-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 @media (hover: hover) {
-  .video-media:hover,
-  .reel-card:hover {
+  .video-media:hover {
     border-color: #e8b11a;
     box-shadow:
       0 0 0 1px #e8b11a66,
       0 0 22px #e8b11a30;
   }
-  .video-media:hover::after,
-  .reel-card:hover::after {
+  .video-media:hover::after {
     opacity: 0.4;
   }
-  .video-media:hover img,
-  .reel-card:hover .reel-thumbnail {
+  .video-media:hover img {
     transform: scale(1.02);
   }
 }
@@ -566,8 +599,7 @@
   .reel-card::after {
     transition: none;
   }
-  .video-media:hover img,
-  .reel-card:hover .reel-thumbnail {
+  .video-media:hover img {
     transform: none;
   }
 }

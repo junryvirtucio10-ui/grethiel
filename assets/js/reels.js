@@ -1,3 +1,5 @@
+import { createReelPlayer } from "./reel-player.js?v=viewer-3";
+
 export function initReels(root) {
   const carousel = root.querySelector(".reels-carousel");
   const stage = carousel?.querySelector(".reels-grid");
@@ -9,50 +11,85 @@ export function initReels(root) {
   const status = carousel.querySelector(".reels-status");
   const dots = carousel.querySelector(".reels-dots");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let active = 0;
+  const slideDuration = 720;
+  const playReel = sources.some((card) => card.hasAttribute("data-reel-video"))
+    ? createReelPlayer(sources.filter((card) => card.hasAttribute("data-reel-video")), {
+        onSelect: (card) => {
+          active = sources.indexOf(card);
+          render();
+        },
+        getReturnFocus: () => stage.querySelector(".reel-card.is-active") || carousel,
+      })
+    : null;
+  let active = 2;
   let moving = false;
+  let shift = 0;
   let gesture = null;
   let suppressClick = false;
   let suppressionTimer;
-  const wrap = (index) => (index + sources.length) % sources.length;
+  const wrap = (index) => ((index % sources.length) + sources.length) % sources.length;
   const title = (index) => sources[index].querySelector("img").alt;
-  const step = () => stage.clientWidth * (window.innerWidth <= 680 ? 0.64 : 0.33);
+  const visibleRadius = () => (window.innerWidth <= 680 ? 1 : 2);
+  const step = () => stage.clientWidth * (window.innerWidth <= 680 ? 0.56 : 0.185);
 
-  const position = (shift = 0) => {
+  const position = (nextShift = shift) => {
+    shift = nextShift;
+    const spacing = step();
     stage.querySelectorAll(".reel-card").forEach((card) => {
       const offset = Number(card.dataset.slot) + shift;
-      const distance = Math.min(Math.abs(offset), 1);
-      card.style.transform = `translate(-50%, -50%) translateX(${offset * step()}px) scale(${1 - distance * 0.16})`;
-      card.style.opacity = String(1 - distance * 0.54);
+      const distance = Math.min(Math.abs(offset), 2);
+      card.style.transform = `translate(-50%, -50%) translate3d(${offset * spacing}px, 0, 0) scale(${1 - distance * 0.14})`;
+      card.style.opacity = "1";
+      card.style.zIndex = String(1000 - Math.round(Math.abs(offset) * 100));
+      card.style.setProperty("--reel-focus", String(Math.max(0, 1 - Math.abs(offset))));
+      const hidden = Math.abs(Number(card.dataset.slot)) > visibleRadius();
+      card.inert = hidden;
+      card.setAttribute("aria-hidden", String(hidden));
     });
   };
 
-  const render = () => {
+  const render = (movedSlots = 0) => {
     stage.classList.remove("is-moving", "is-dragging");
-    const cards = [];
-    // Extra offscreen neighbours make the wrap seamless, including with just three reels.
-    for (let slot = -2; slot <= 2; slot += 1) {
+    // Reuse the cards that just moved; only recycle copies beyond the visible stack.
+    const existing = new Map();
+    stage.querySelectorAll(".reel-card").forEach((card) => {
+      if (card.dataset.slot === undefined) {
+        card.remove();
+        return;
+      }
+      existing.set(Number(card.dataset.slot) - movedSlots, card);
+    });
+    const buffer = 2 + Math.floor(sources.length / 2);
+    for (let slot = -buffer; slot <= buffer; slot += 1) {
       const index = wrap(active + slot);
-      const card = sources[index].cloneNode(true);
+      let card = existing.get(slot);
+      existing.delete(slot);
+      if (card && Number(card.dataset.reelIndex) !== index) {
+        card.remove();
+        card = null;
+      }
+      if (!card) {
+        card = sources[index].cloneNode(true);
+        card.draggable = false;
+        card.querySelector("img").draggable = false;
+        card.querySelector("img").loading = "eager";
+        stage.append(card);
+      }
       card.dataset.slot = String(slot);
       card.dataset.reelIndex = String(index);
-      card.draggable = false;
-      card.querySelector("img").draggable = false;
       card.classList.toggle("is-active", slot === 0);
-      card.setAttribute("aria-label", slot === 0 ? `Watch ${title(index)} on Facebook` : `Show ${title(index)}`);
+      card.setAttribute("aria-label", slot === 0 ? sources[index].getAttribute("aria-label") : `Show ${title(index)}`);
       if (slot !== 0) {
         card.setAttribute("role", "button");
         card.removeAttribute("target");
-        card.querySelector(".reel-bottom").innerHTML = 'BRING INTO FOCUS <b aria-hidden="true">↔</b>';
+      } else {
+        card.removeAttribute("role");
+        const target = sources[index].getAttribute("target");
+        if (target) card.setAttribute("target", target);
       }
-      if (Math.abs(slot) > 1) {
-        card.inert = true;
-        card.setAttribute("aria-hidden", "true");
-      }
-      cards.push(card);
     }
-    stage.replaceChildren(...cards);
-    position();
+    existing.forEach((card) => card.remove());
+    position(0);
     status.textContent = `${String(active + 1).padStart(2, "0")} / ${String(sources.length).padStart(2, "0")} — ${title(active)}`;
     [...dots.children].forEach((dot, index) => {
       dot.setAttribute("aria-pressed", String(index === active));
@@ -64,15 +101,30 @@ export function initReels(root) {
     moving = true;
     if (stage.contains(document.activeElement)) carousel.focus({ preventScroll: true });
     stage.classList.remove("is-dragging");
-    // Commit the current drag position before starting the snap animation.
-    stage.getBoundingClientRect();
     stage.classList.add("is-moving");
-    position(-direction);
-    window.setTimeout(() => {
+    const from = shift;
+    const to = -direction;
+    const finish = () => {
       active = destination;
-      render();
+      render(direction);
       moving = false;
-    }, reducedMotion.matches ? 0 : 420);
+    };
+    if (reducedMotion.matches || Math.abs(to - from) < 0.001) {
+      position(to);
+      finish();
+      return;
+    }
+    // One clock controls translation, scale, depth, and the active treatment.
+    // Settling re-bases the same nodes at exactly the final animated positions.
+    const started = performance.now();
+    const animate = (now) => {
+      const progress = reducedMotion.matches ? 1 : Math.max(0, Math.min((now - started) / slideDuration, 1));
+      const eased = progress * progress * (3 - 2 * progress);
+      position(from + (to - from) * eased);
+      if (progress < 1) window.requestAnimationFrame(animate);
+      else finish();
+    };
+    window.requestAnimationFrame(animate);
   };
 
   sources.forEach((_, index) => {
@@ -82,7 +134,7 @@ export function initReels(root) {
     dot.addEventListener("click", () => {
       if (index === active) return;
       const forward = wrap(index - active);
-      move(forward <= sources.length / 2 ? 1 : -1, index);
+      move(forward <= sources.length / 2 ? forward : forward - sources.length, index);
     });
     dots.append(dot);
   });
@@ -108,7 +160,13 @@ export function initReels(root) {
     const slot = Number(card.dataset.slot);
     if (slot !== 0) {
       event.preventDefault();
-      move(Math.sign(slot));
+      move(slot, wrap(active + slot));
+    } else if (
+      card.hasAttribute("data-reel-video") && playReel &&
+      !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey
+    ) {
+      event.preventDefault();
+      playReel(card);
     }
   });
   stage.addEventListener("dragstart", (event) => event.preventDefault());
@@ -146,9 +204,7 @@ export function initReels(root) {
     if (event.type !== "pointercancel" && Math.abs(distance) >= Math.min(55, step() * 0.2)) {
       move(distance < 0 ? 1 : -1);
     } else {
-      stage.classList.remove("is-dragging");
-      stage.classList.add("is-moving");
-      position();
+      move(0, active);
     }
   };
   stage.addEventListener("pointerup", finishGesture);

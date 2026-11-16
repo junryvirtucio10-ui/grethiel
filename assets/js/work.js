@@ -1,4 +1,4 @@
-import { initReels } from "./reels.js";
+import { initReels } from "./reels.js?v=reel-continuity-4";
 
 export function initWork() {
   const workSection = document.querySelector("#work");
