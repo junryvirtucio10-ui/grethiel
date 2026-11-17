@@ -17,7 +17,7 @@ A static portfolio website using HTML, CSS, and browser JavaScript modules. No b
 - `assets/css/footer.css` — closing call to action with the original office photo, gold email button, and responsive layout. The `#contact` anchor leads to the footer; its button opens an email to `grethieljoyc@gmail.com`.
 - `assets/css/audio.css` — soundtrack controls and entry dialog.
 - `assets/css/motion.css` — scroll reveals and motion preferences.
-- `assets/js/smooth-scroll.js` — eased desktop wheel scrolling with a 220ms response time for a noticeable glide. Touch, keyboard navigation, nested scroll areas, and reduced-motion preferences keep native behavior. Adjust `easeTime` to change the ease-out (higher values glide longer).
+- `assets/js/smooth-scroll.js` — starts directly from an async module in the page head, independently of the other portfolio modules. Desktop wheel scrolling has a 220ms response time for a noticeable glide. Touch, keyboard navigation, nested scroll areas, open dialogs, and reduced-motion preferences keep native behavior. Adjust `easeTime` to change the ease-out (higher values glide longer).
 - `assets/js/main.js` — initializes the feature modules beside it.
 - `assets/images/`, `assets/audio/` — files used by the website.
 - `assets/images/grethiel-circle-favicon.svg` — outlined gold G on a white circle with transparent corners, with 16px, 32px, and 512px PNG exports and a 180px Apple touch icon beside it. The tab uses PNGs for compatibility with Live Server; `favicon.ico` provides the standard 16/32/48px fallback.

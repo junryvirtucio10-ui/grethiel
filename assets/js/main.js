@@ -5,7 +5,6 @@ import { initAudio } from "./audio.js";
 import { initProcess } from "./process.js";
 import { initMotion } from "./motion.js?v=closing-motion-1";
 import { initProof } from "./proof.js";
-import { initSmoothScroll } from "./smooth-scroll.js?v=page-ease-5";
 
 // Audio opens the entry dialog before motion waits for the dialog to close.
 initNavigation();
@@ -13,7 +12,6 @@ initProof();
 initWork();
 initServices();
 initAudio();
-initSmoothScroll();
 initProcess();
 initMotion();
 

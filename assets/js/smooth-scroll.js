@@ -1,4 +1,4 @@
-export function initSmoothScroll() {
+function initSmoothScroll() {
   const root = document.documentElement;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const finePointer = window.matchMedia("(pointer: fine)");
@@ -119,3 +119,6 @@ export function initSmoothScroll() {
   finePointer.addEventListener("change", configure);
   configure();
 }
+
+// Start independently of the portfolio's larger module graph.
+initSmoothScroll();
