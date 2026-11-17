@@ -2,8 +2,8 @@ export function initSmoothScroll() {
   const root = document.documentElement;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const finePointer = window.matchMedia("(pointer: fine)");
-  // A short, time-based ease feels the same on 60Hz and 120Hz displays.
-  const easeTime = 110;
+  // Keep a visible ease-out after wheel input, independent of display refresh rate.
+  const easeTime = 220;
   let frame = 0;
   let current = window.scrollY;
   let target = current;
